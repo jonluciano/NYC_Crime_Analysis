@@ -1,0 +1,135 @@
+---
+title: "NYC_Crime_Data_V2"
+author: "J. Luciano"
+date: '2022-04-17'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## NYC Crime Data
+The report contains data from the following website: https://data.cityofnewyork.us.
+
+Overall goal was to identify if there is a high correlation between the amount of arrests and shootings.
+
+I have downloaded a CSV file of Arrest Data and Shooting Data. 
+
+I have analyzed the amount of shooting by Borough (Boro) and Precinct.
+
+I have also included a linear model with shooting being the target value and it being based on the the number of arrests.
+
+Note - I have summed all historic data.
+
+
+
+
+Libraries uses
+```{r libraries_used}
+library(RCurl)
+library(tidyverse)
+library(dplyr)
+
+```
+
+Reading in the data from 2 csv files NYC Shooting Data and NYC Arrest Data
+```{r get_nyc_crime_data, message = FALSE}
+NYC_Shooting_data <- read_csv("https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD")
+NYC_Arrest_Data <- read.csv("https://data.cityofnewyork.us/api/views/8h9b-rp9u/rows.csv?accessType=DOWNLOAD", header=TRUE)
+
+```
+
+Creating a Bar Column with total shooting with color views of each borough (BORO)
+```{r Creating_Bar_Plot_NYC_Shooting_By_Boro }
+NYC_BP <- ggplot(NYC_Shooting_data, aes(x="", y = INCIDENT_KEY ,fill=BORO))+
+geom_bar(width = 1, stat = "identity")
+NYC_BP
+
+```
+
+Creating a Pie Chart Column with total shooting with color views of each borough (BORO)
+```{r Creating_Pie_Chart_NYC_Shooting_By_Boro}
+NYC_Pie <- NYC_BP + coord_polar("y",start=0)
+
+NYC_Pie
+
+```
+
+Creating a count of shooting, group by data is based on Precinct
+Data is shown
+
+```{r Count_by_precint_Shooting_data}
+NYC_Shooting_BY_PRECINCT <- NYC_Shooting_data %>% group_by(PRECINCT) %>% tally()
+NYC_Shooting_BY_PRECINCT  <- NYC_Shooting_BY_PRECINCT  %>%
+rename(Number_Of_Shootings  = n)
+NYC_Shooting_BY_PRECINCT
+
+```
+bREAK 2
+
+
+count of arrest by precicint
+we also changed the name of arrest_precinct columnt to precinct
+data is shown
+```{r Count_by_precint_Arrest_data }
+
+NYC_Arrest_BY_PRECINCTS <- NYC_Arrest_Data %>% group_by(ARREST_PRECINCT) %>% tally()
+
+NYC_Arrest_BY_PRECINCTS  <- NYC_Arrest_BY_PRECINCTS  %>%
+rename(PRECINCT  = ARREST_PRECINCT)
+
+NYC_Arrest_BY_PRECINCTS  <- NYC_Arrest_BY_PRECINCTS  %>%
+rename(Number_Of_Arrests  = n)
+NYC_Arrest_BY_PRECINCTS
+```
+
+
+Merge NYC_Shooting_BY_PRECINCT and NYC_Arrest_By_Precinct data frames (join them together)
+Data is shown
+```{r Merge_Data }
+
+NYC_Combined_Crime_Data = merge(x=NYC_Arrest_BY_PRECINCTS ,y=NYC_Shooting_BY_PRECINCT  ,by="PRECINCT",all.y=TRUE)
+NYC_Combined_Crime_Data
+
+```
+
+Building Predictive Linear Model with NYC_Combined_Data
+Will look to predict the amount shootings based on how many arrests are made
+```{r Linear_Model }
+
+mod <- lm(Number_Of_Shootings ~ Number_Of_Arrests , data = NYC_Combined_Crime_Data)
+summary(mod)
+
+
+
+```
+
+Building LInear Graphs that first plot number of arrests compared to shooting 
+Then we add the linear model in with a red line.
+
+```{r Linear_Graph }
+
+
+shootings.graph<-ggplot(NYC_Combined_Crime_Data, aes(x=Number_Of_Arrests, y=Number_Of_Shootings))+ geom_point()
+```
+
+```{r Linear_Graph2 }
+shootings.graph <- shootings.graph + geom_smooth(method="lm", col="red")
+shootings.graph
+
+
+```
+Closing wording, I did have a bias, as I would have assumed that the there would be a high correlation of shootings where a high number of arrests were made.
+
+Also, my assumption is that in Staten Island which has a more suburban feel, there would be less shootings per arrest.
+
+Based on the data there is a high correlation when comparing arrests to shootings in each precinct.
+
+Ultimately, there is a probably high causation based on weatlth, population density, access to education and other factors that would need to be included in the analysis.
+
+Higher crimes in itself will lead to more arrests and shootings, thus, the correlation makes sense.
+
+sessionInfo()
